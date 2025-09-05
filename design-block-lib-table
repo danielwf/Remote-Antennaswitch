@@ -1,0 +1,5 @@
+(design_block_lib_table
+  (version 7)
+  (lib (name "ESP32_mini_KiCad_Library-master")(type "KiCad")(uri "${KIPRJMOD}/ESP32_mini_KiCad_Library-master")(options "")(descr ""))
+  (lib (name "ESP32_mini.pretty")(type "KiCad")(uri "${KIPRJMOD}/ESP32_mini_KiCad_Library-master/ESP32_mini.pretty")(options "")(descr ""))
+)
