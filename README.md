@@ -35,3 +35,7 @@ to discuss what you would like to change.
 ## License
 
 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) 
+
+![Schematic](schematic.png)
+![(Layout front](layout_front.png)
+![(Layout back](layout_back.png)
