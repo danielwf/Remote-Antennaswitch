@@ -1,18 +1,21 @@
+#define ANTSWITCH_REMOTE_VERSION 25102601
 //
 //    .----------------------------------------------------------------------------------------------------------------------------------------------------------------.
 //    |                                                                 "AntSwitch Remote" with ESP32                                                                  |
 //    '----------------------------------------------------------------------------------------------------------------------------------------------------------------'
-//     by Daniel Wendt-Fröhlich, DL2AB (daniel.w-froehlich@aetherfoton.de, dl2ab@darc.de) - AI supported bei Google Gemini
+//     by Daniel Wendt-Fröhlich, DL2AB (daniel.w-froehlich@aetherfoton.de, dl2ab@darc.de) - AI supported by Google Gemini
 //     License CC-by-SA 4.0 - Sep-Oct 2025 - Bremen(GER) -- https://creativecommons.org/licenses/by-sa/4.0/
 //
 //     Schematic, PCB and Code: https://github.com/danielwf/Remote-Antennaswitch    
 // 
 //     Used Libs:
 //     - Install "esp32" by Espressif via Arduino-Board-Manager and select "Wemos D1 ESP32" (you have to scroll down the unsorted list)
-//     - "WiFiManager" by tzapu https://github.com/tzapu/WiFiManager *
-//     - "Adafruit_MCP23017" by adafruit https://github.com/adafruit/Adafruit-MCP23017-Arduino-Library *
-//     - "Adafruit ADS1X15" by adafruit https://github.com/adafruit/Adafruit_ADS1X15 *
-//        * install via Arduino Library Manager
+//     - Install via Arduino Library Manager:
+//        - "WiFiManager" by tzapu * https://github.com/tzapu/WiFiManager 
+//        - "Adafruit_MCP23017" by adafruit * https://github.com/adafruit/Adafruit-MCP23017-Arduino-Library 
+//        - "Adafruit ADS1X15" by adafruit * https://github.com/adafruit/Adafruit_ADS1X15 
+//                      ----------> * THANK YOU FOR YOUR WORK! <----------
+//
 // 
 //     IF YOU LOOSE ADMIN-CONFIG-PASSWORD OR NEED A "FACTORY-RESET" FOR ANOTHER REASON:
 //         - Reupload Sketch with -> [Tools] -> "Erase All Flash Before Sketch Upload" -> "enabled"
@@ -97,7 +100,7 @@ const byte MAX_PASSWORD_LENGTH = 32;
 struct Config {                            // initiale Konfiguration, kann alles später auf der Config-Seite geändert werden
   int version = 1;
   char hostname[40] = "antswitch";
-  char configPassword[MAX_PASSWORD_LENGTH] = "antswitch"; // Standardpasswort
+  char configPassword[MAX_PASSWORD_LENGTH] = "antswitch"; // Standardpasswort (User: Admin)
   char inputLabels[3][MAX_LABEL_LENGTH] = {"TRX 1", "TRX 2", "TRX 3"}; // Input-Labels
   char outputLabels[5][MAX_LABEL_LENGTH] = {"Antenna 1", "Antenna 2", "Antenna 3", "Antenna 4", "Antenna 5"}; // Output-Labels
   bool defaultInputEnabled[3] = {true, false, false}; // Standardzustand-Checkboxen
@@ -120,7 +123,7 @@ int16_t rawReflected = 0; // Gemessen an AIN1
 const float ADS_FULLSCALE = 4.096;
 const float ADS_MAX_VALUE = 32767.0; // Max. Rohwert (15-Bit, da +/-)
 const float MAX_CAL_VOLTAGE = 3.3;  // 3.3V am ADS1115 entspricht maximaler Leistung
-const float MAX_CAL_POWER = 150.0;      // NEU: Maximale Leistung in Watt (durch Poti eingestellt)
+const float MAX_CAL_POWER = 150.0;      // Maximale Leistung in Watt (durch Poti eingestellt)
 const float VOLTS_SQ_TO_WATTS_FACTOR = MAX_CAL_POWER / (MAX_CAL_VOLTAGE * MAX_CAL_VOLTAGE); // Berechnung: 150.0 / (3.3 * 3.3) ≈ 13.77 W/V²
 
 void setupADS() {
@@ -201,7 +204,7 @@ const float MAX_SWITCHING_POWER_W = 5.0; // Max. erlaubte Leistung in Watt für 
 #define mcpOutput3 0b0000000000110000
 #define mcpOutput4 0b0000000011000000
 #define mcpOutput5 0b1100000000000000
-#define mcpRelOn   0b0101011001010101 //bits for Input1 reversed, see error in schematic U2/AOUT1+AOUT2
+#define mcpRelOn   0b0101011001010101 //bits for Input1 reversed, see "error" in schematic U2/AOUT1+AOUT2
 #define mcpRelOff  0b1010100110101010 
 #define mcpRelNull 0x0000
 const uint16_t mcpInputRelais[NUM_INPUTS] = {mcpInput1, mcpInput2, mcpInput3};
@@ -322,7 +325,7 @@ void applyDefaultState() {
 }
 
 //    .---------------------------------------------------------------------------------------.
-//    |             LEDs                                                                      |
+//    |             LEDs and buttons                                                          |
 //    '---------------------------------------------------------------------------------------'
 #define ledIn1 14
 #define ledIn2 9
@@ -332,10 +335,14 @@ void applyDefaultState() {
 #define ledOut3 23
 #define ledOut4 19
 #define ledOut5 18
+#define buttonInput 36
+#define buttonOutput 26
 const int INPUT_LED_PINS[] = {ledIn1, ledIn2, ledIn3};
 const int OUTPUT_LED_PINS[] = {ledOut1, ledOut2, ledOut3, ledOut4, ledOut5};
 
 void setupGpios() {
+    pinMode(buttonInput, INPUT);  // "INPUT" is correct. We use external PullUp-Resistors for the buttons.
+    pinMode(buttonOutput, INPUT); 
     for (int i = 0; i < NUM_INPUTS; i++) {
         pinMode(INPUT_LED_PINS[i], OUTPUT);
         digitalWrite(INPUT_LED_PINS[i], LOW);
@@ -373,6 +380,33 @@ void setOutputLed(int outputIndex) {
     digitalWrite(OUTPUT_LED_PINS[i], LOW);
   }
   digitalWrite(OUTPUT_LED_PINS[outputIndex - 1], HIGH);
+}
+
+unsigned long lastButtonTime = 0;
+const long DEBOUNCE_DELAY_MS = 200; // Entprellzeit: 200ms
+void switchButton() {
+    unsigned long currentTime = millis();
+    if (currentTime - lastButtonTime < DEBOUNCE_DELAY_MS) { // Prüfe, ob die Entprellzeit abgelaufen ist
+        return;
+    }
+    if (digitalRead(buttonInput) == LOW) {            // 1. INPUT-Button (Pin 36) prüfen; LOW = Gedrückt
+        lastButtonTime = currentTime;
+        byte nextInput = (currentInput % NUM_INPUTS) + 1;
+        switchInput(nextInput); // Versuche, zum nächsten Eingang zu schalten
+        while(digitalRead(buttonInput) == LOW) { // Warte, bis der Button losgelassen wird (optional, aber gut für den Loop-Fluss)
+            delay(5); 
+        }
+        return;
+    }
+    if (digitalRead(buttonOutput) == LOW) {     // 2. OUTPUT-Button (Pin 26) prüfe
+        lastButtonTime = currentTime;
+        byte nextOutput = (currentOutput % NUM_OUTPUTS) + 1;          // Versuche, zum nächsten Ausgang zu schalten
+        switchOutput(nextOutput);
+        while(digitalRead(buttonOutput) == LOW) {         // Warte, bis der Button losgelassen wird
+            delay(5); 
+        }
+        return;
+    }
 }
 
 //    .---------------------------------------------------------------------------------------.
@@ -502,7 +536,6 @@ void handleConfig() {
     html += "<input type='text' name='iLabel" + String(i + 1) + "' value='" + String(appConfig.inputLabels[i]) + "'>";
     html += "<label><input type='radio' name='defaultInput' value='" + String(i + 1) + "'" + (appConfig.defaultInputEnabled[i] ? " checked" : "") + ">default input</label><p>";
   }
-  
   // --- Output Labels und Standardzustand ---
   html += "<h2>Output Labels (Antennas)</h2>";
   for (int i = 0; i < NUM_OUTPUTS; i++) {
@@ -510,20 +543,26 @@ void handleConfig() {
     html += "<input type='text' name='oLabel" + String(i + 1) + "' value='" + String(appConfig.outputLabels[i]) + "'>";
     html += "<label><input type='radio' name='defaultOutput' value='" + String(i + 1) + "'" + (appConfig.defaultOutputEnabled[i] ? " checked" : "") + ">default output</label><p>";
   }
-
   html += "<h2>Password and Hostname</h2>";
   // --- Passwort ---
-  html += "<label for='password'>New Passwort (Admin):</label>";
+  html += "<label for='password'><b>New Passwort (Admin)</b>:</label>";
   html += "<input type='password' id='password' name='password' value=''><br><br>";
     // --- Hostname ---
   html += "<label for='hostname'><b>Hostname:</b></label>";
   html += "<input type='text' id='hostname' name='hostname' value='" + String(appConfig.hostname) + "'>(reset required after change)<br><br>";
-
   html += "<input type='submit' value='Save'>";
   html += "</form>";
   html += "<form method='POST' action='/restart'>";
   // ACHTUNG: Der Neustart-Button ist rot, um Verwechslungen zu vermeiden
   html += "<input type='submit' value='Reset AntSwitch' style='background-color: #f44336;'>"; 
+  html += "</form>";
+  // --- FIRMWARE UPLOAD ---
+  html += "<h2>Firmware Update (OTA)</h2>";
+  html += "Installed Version: " + String(ANTSWITCH_REMOTE_VERSION) + " - <a href='https://github.com/danielwf/Remote-Antennaswitch' target=_blank>Updates on github</a>";
+  html += "<form method='POST' action='/doupdate' enctype='multipart/form-data' class='ota-form'>";
+  html += "<label for='firmware'>New Firmware (.bin):</label>";
+  html += "<input type='file' name='firmware' accept='.bin'><br>";
+  html += "<input type='submit' value='Upload & Reboot' style='background-color: #3643f4;'>";
   html += "</form>";
   html += "</body></html>";
   server.send(200, "text/html", html);
@@ -682,6 +721,7 @@ void handleRoot() {
     html += ".logo-icon { color: #008cba; } /* Farbe des SVG-Icons anpassen */";
     html += "h1 { font-size: 1.8em; margin: 0; color: #008cba; }"; // Blau/Cyan für den Titel
     html += "a[href] {color: #bbb;}";
+    html += "hr {border: none; height: 1px; background-color: #555; }";
     html += ".hostname-display { font-size: 0.9em; color: #bbb; }";
     html += "</style>";
     html += "</head><body>";
@@ -691,11 +731,7 @@ void handleRoot() {
     html += "<p><h2>TX-Power: <strong id='power-f'>0.0</strong> W</h2></p>";
     html += "<p><h3>Power(peak): <strong id='power-peak'>0.0</strong> W</h3></p>";
     html += "<p><h2>SWR: <span id='swr-display' style='background-color: lightgreen;'>1.00</span></h2></p>"; // NEU: Bereich für SWR mit Farbe
-    
-    // --- UMSCHALT-BUTTONS ---
-    html += "<h2>Steuerung</h2>";
-    
-    // Buttons für Eingänge
+    html += "<p>&nbsp;</p><h2>Transceiver</h2>";   // --- UMSCHALT-BUTTONS ---
     html += "<div id='input-buttons'>";
     for (int i = 1; i <= NUM_INPUTS; i++) {
         String buttonText = appConfig.inputLabels[i - 1];
@@ -703,15 +739,14 @@ void handleRoot() {
         html += "<button onclick=\"doSwitch('input', " + String(i) + ")\" id=\"btn-input-" + String(i) + "\">" + buttonText + "</button> ";
     }
     html += "</div><br>";
-
-    // Buttons für Ausgänge
-    html += "<div id='output-buttons'>";
+    html += "<h2>Antenna</h2>";
+    html += "<div id='output-buttons'>"; 
     for (int i = 1; i <= NUM_OUTPUTS; i++) {
         String buttonText = appConfig.outputLabels[i - 1];
         html += "<button onclick=\"doSwitch('output', " + String(i) + ")\" id=\"btn-output-" + String(i) + "\">" + buttonText + "</button> ";
     }
     html += "</div>";
-    html += "<hr><div class='hostname-display'><p>Hostname: <strong>" + String(appConfig.hostname) + ".local</strong> | IP: " + WiFi.localIP().toString() + " | <a href=\"./config\" target=_blank>Config</a></p></div>";
+    html += "<hr><div class='hostname-display'><p>Hostname: <strong>" + String(appConfig.hostname) + ".local</strong> | IP: " + WiFi.localIP().toString() + " | <a href=\"./config\">Config</a></p></div>";
 
     // --- JavaScript Logik ---
     html += "<script>";
@@ -743,7 +778,6 @@ void handleRoot() {
     html += "  var swrDisplay = document.getElementById('swr-display');";
     html += "  swrDisplay.innerHTML = data.swr;";
     html += "  swrDisplay.style.backgroundColor = getSWRColor(data.swr);"; // <-- Farbliche Hervorhebung
-    
     html += "}"; // Ende von updateStatus
 
     // Funktion: Ruft den aktuellen Status vom Server ab (für window.onload und setInterval)
@@ -787,6 +821,36 @@ void handleRoot() {
     server.send(200, "text/html", html);
 }
 
+//OTA-Updates
+#include <Update.h>
+void handleFileUpload() {
+  HTTPUpload& upload = server.upload();        // Das 'upload'-Objekt wird automatisch vom WebServer-Core bereitgestellt.
+  if (upload.status == UPLOAD_FILE_START) {          // UPLOAD START: Update-Prozess initialisieren
+    Update.begin(UPDATE_SIZE_UNKNOWN); 
+  } 
+  else if (upload.status == UPLOAD_FILE_WRITE) {     // UPLOAD SCHREIBEN: Datenblock in den Flash schreiben.
+    Update.write(upload.buf, upload.currentSize);
+  } 
+  else if (upload.status == UPLOAD_FILE_END) {       // UPLOAD ENDE: Update abschließen. Die Rückgabe wird in handleDoUpdate geprüft.
+    Update.end(true); 
+  }
+}
+void handleDoUpdate() { // Handler, der die finale Antwort nach dem Hochladen sendet
+  if (!checkConfigAuth()) return;
+  server.sendHeader("Connection", "close");   // Wir senden die Header als erstes, bevor wir das Update finalisieren.
+  server.sendHeader("Access-Control-Allow-Origin", "*");
+  if (Update.isFinished()) {   // Prüfen, ob die Hintergrundverarbeitung der Datei (handleFileUpload) erfolgreich war.
+    server.send(200, "text/html", "Update erfolgreich! System wird neu gestartet.");
+    delay(500); 
+    ESP.restart();
+    return;
+  } else {
+    String msg = "Update fehlgeschlagen. Fehlercode: " + String(Update.getError());     // Wenn Update.isFinished() false ist, gab es einen Fehler (z.B. falsches Dateiformat, Schreibfehler).
+    server.send(500, "text/plain", msg);
+    return;
+  }
+}
+
 // Startet den Webserver und die Handler
 void startWebServer() {
   server.on("/", HTTP_GET, handleRoot);
@@ -795,6 +859,7 @@ void startWebServer() {
   server.on("/config", HTTP_GET, handleConfig);
   server.on("/saveconfig", HTTP_POST, handleSaveConfig); 
   server.on("/restart", HTTP_POST, handleRestart);
+  server.on("/doupdate", HTTP_POST, handleDoUpdate, handleFileUpload);
   server.onNotFound(handleRoot); 
   server.begin();
 }
@@ -804,8 +869,7 @@ void webTask(void *pvParameters) {
   // Die Task läuft in einer Endlosschleife
   for (;;) {
     server.handleClient();
-    // Kurze Verzögerung, um anderen Aufgaben auf Core 0 Zeit zu geben
-    vTaskDelay(1 / portTICK_PERIOD_MS); 
+    vTaskDelay(1 / portTICK_PERIOD_MS);     // Kurze Verzögerung, um anderen Aufgaben auf Core 0 Zeit zu geben
   }
 }
 
@@ -1062,5 +1126,6 @@ void setup() {
 
 void loop() {
   handleSWRReading(); // liest das SWR-Meter (Intervalle werde in der Funktion gesteuert)
-  handleSerialCommands(); // <-- Platzhalter für die zukünftige Funktion
+  handleSerialCommands(); // Serielle Steuerung
+  switchButton();  //Nahbedienung per Buttons
 }
