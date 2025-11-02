@@ -22,22 +22,23 @@ Since both the relay switching and the reading of the SWR bridge are communicate
 You maybe need the KiCad symbol and footprint for the ESP32 Mini(Wemos D1 Mini) [https://github.com/r0oland/ESP32_mini_KiCad_Library](https://github.com/r0oland/ESP32_mini_KiCad_Library) - Thanks to [Johannes Rebling](https://github.com/r0oland)
 
 **Hardware:**
-Everything you need to prepare your PCB ordering with KiCAD is included. It is best to use a corresponding KiCAD plugin for this.
-In "BOM.ods" you will find the material list with links to the item numbers at Mouser and Reichelt. In the table, you can easily adjust how many devices the parts should be ordered for (as of Oct-25).
-The BOM includes a housing that is well suited for this purpose. The drill holes for the circuit board can be easily marked with an unassembled PCB (which should be done first). "Panels.svg" contains the drill holes and labels for the buttons, LEDs, and connection sockets. These can be produced using a vinyl cutter or laser engraver, for example. The easiest way to create the USB socket is to drill a 14 mm hole and produce a cover for it using a 3D printer. A template for this is also included. 
-Once the parts have been assembled, the Arduino code for the ESP32 can be uploaded. You will find this in “AntennaSwitch-ESP32.ino”. For later OTA updates via the web interface, you can use “AntennaSwitch-ESP32.ino.bin”. 
+Everything you need to prepare your PCB ordering with KiCAD is included. It is best to use a corresponding KiCAD plugin for this.  
+In "BOM.ods" you will find the material list with links to the item numbers at Mouser and Reichelt. In the table, you can easily adjust how many devices the parts should be ordered for (as of Oct-25).  
+The BOM includes a housing that is well suited for this purpose. The drill holes for the circuit board can be easily marked with an unassembled PCB (which should be done first). "Panels.svg" contains the drill holes and labels for the buttons, LEDs, and connection sockets. These can be produced using a vinyl cutter or laser engraver, for example. The easiest way to create the USB socket is to drill a 14 mm hole and produce a cover for it using a 3D printer. A template for this is also included.  
+Once the parts have been assembled, the Arduino code for the ESP32 can be uploaded. You will find this in “AntennaSwitch-ESP32.ino”. For later OTA updates via the web interface, you can use “AntennaSwitch-ESP32.ino.bin”.  
 
 **Usage:**
-After you have uploaded the Arduino code to the ESP32, you must connect to the “AntSwitch-Config” Wi-Fi network and set up the desired Wi-Fi network via the captive portal. 
-Once the device is connected to your home network, you can configure it via “https://antswitch.local,” such as a new host name and the labels for the connections. 
-The device can also be controlled via the USB-serial interface (115200 baud). With “GET:NET” you can display the current IP address. 
-Serial commands:
-       ____DESCRIPTION__________INPUT_________________________RESPONSE___________________________________
-       Switching
-       Switch Input (TRX)          SET:I<Index>                  ACK:I<CurrentInput>,O<CurrentOutput>
-                                                                ERR:BLOCKED_TX (if P_fwd > 5.0W)
-       Switch Output (Antenna)     SET:O<Index>                  ACK:I<CurrentInput>,O<CurrentOutput>
-                                                                ERR:BLOCKED_TX (if P_fwd > 5.0W)
+After you have uploaded the Arduino code to the ESP32, you must connect to the “AntSwitch-Config” Wi-Fi network and set up the desired Wi-Fi network via the captive portal.  
+Once the device is connected to your home network, you can configure it via “https://antswitch.local,” such as a new host name and the labels for the connections.  
+The device can also be controlled via the USB-serial interface (115200 baud). With “GET:NET” you can display the current IP address.  
+Serial commands: 
+```
+       ____DESCRIPTION__________INPUT_________________________RESPONSE___________________________________  
+       Switching  
+       Switch Input (TRX)          SET:I<Index>                  ACK:I<CurrentInput>,O<CurrentOutput>  
+                                                                ERR:BLOCKED_TX (if P_fwd > 5.0W)  
+       Switch Output (Antenna)     SET:O<Index>                  ACK:I<CurrentInput>,O<CurrentOutput>  
+                                                                ERR:BLOCKED_TX (if P_fwd > 5.0W)  
        ___________________________________________________________________________________________________
        Configuration
        Set Input Label             SET_LABEL I <Index> <Label>   ACK:LABEL_OK
@@ -62,6 +63,7 @@ Serial commands:
        Get IP and Hostname         GET:NET                       ACK:NET,IP=x.x.x.x,HOST=<Hostname>
        Get Input Label             GET_LABEL I <Index>           ACK:LABEL_I<Index>=<Label>
        Get Output Label            GET_LABEL O <Index>           ACK:LABEL_O<Index>=<Label>
+```
 
 ## Contributing
 
