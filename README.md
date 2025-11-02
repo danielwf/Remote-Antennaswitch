@@ -29,7 +29,7 @@ Once the parts have been assembled, the Arduino code for the ESP32 can be upload
 
 ## Usage WIFI
 <img src="https://github.com/danielwf/Remote-Antennaswitch/blob/main/webinterface.png" height=300 align=right></img> After you have uploaded the Arduino code to the ESP32, you must connect to the “AntSwitch-Config” Wi-Fi network and set up the desired Wi-Fi network via the captive portal.  
-Once the device is connected to your home network, you can configure it via 'https://antswitch.local' such as a new host name and the labels for the connectors.  
+Once the device is connected to your home network, you can configure it via 'https://antswitch.local' such as a new host name and the labels for the connectors (default password for 'admin' is 'antswitch').
 You can switch via webinterface or API. Examples: 'http://antswitch.local/api/switch?input=1' (set input to 1), 'http://antswitch.local/api/switch?output=2' (set output to 2) and 'http://antswitch.local/api/status' for JSON-Status. 
 
 ## Usage USB-serial
