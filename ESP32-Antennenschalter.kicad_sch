@@ -5416,6 +5416,18 @@
 		)
 		(uuid "22dc4c3b-0a85-4538-82de-7fbbc25bcc7f")
 	)
+	(text "(max 10.6V)"
+		(exclude_from_sim no)
+		(at 139.446 58.42 90)
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+				(bold yes)
+			)
+		)
+		(uuid "4b1889b8-1b3a-4b35-b4d3-f36a7baf2f23")
+	)
 	(text "0x20"
 		(exclude_from_sim no)
 		(at 44.196 184.404 90)
@@ -5446,7 +5458,7 @@
 		)
 		(uuid "b0c5f704-a808-4c6c-a122-731a6e667403")
 	)
-	(text "(max 200W)"
+	(text "(max 220W)"
 		(exclude_from_sim no)
 		(at 138.684 26.162 90)
 		(effects
@@ -16553,7 +16565,7 @@
 				)
 			)
 		)
-		(property "Value" "100k"
+		(property "Value" "8.2k"
 			(at 147.32 73.66 0)
 			(effects
 				(font
@@ -20832,7 +20844,7 @@
 				)
 			)
 		)
-		(property "Value" "100k"
+		(property "Value" "REMOVE"
 			(at 147.574 88.646 90)
 			(effects
 				(font
@@ -22742,7 +22754,7 @@
 				)
 			)
 		)
-		(property "Value" "100k"
+		(property "Value" "8.2k"
 			(at 162.56 73.914 0)
 			(effects
 				(font
@@ -24800,7 +24812,7 @@
 				)
 			)
 		)
-		(property "Value" "100k"
+		(property "Value" "REMOVE"
 			(at 162.814 88.646 90)
 			(effects
 				(font
