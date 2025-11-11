@@ -1,4 +1,4 @@
-#define ANTSWITCH_REMOTE_VERSION 25102601
+#define ANTSWITCH_REMOTE_VERSION 25111103
 //
 //    .----------------------------------------------------------------------------------------------------------------------------------------------------------------.
 //    |                                                                 "AntSwitch Remote" with ESP32                                                                  |
@@ -19,7 +19,7 @@
 // 
 //     IF YOU LOOSE ADMIN-CONFIG-PASSWORD OR NEED A "FACTORY-RESET" FOR ANOTHER REASON:
 //         - Reupload Sketch with -> [Tools] -> "Erase All Flash Before Sketch Upload" -> "enabled"
-//         - Disable it after reupload or you have to connect Wifi after every sketch update via Arduino IDE ;) 
+//         - Disable it after reupload or you have to connect Wifi after every sketch update via Arduino IDE ;)   
 //
 //     ------------------------------------------------Usage // Serial Commands------------------------------------------------------
 //     First Boot: Connect to "antswitch"-Wifi and use the Captive Portal for connecting to an existing Wifi-Network
@@ -105,6 +105,7 @@ struct Config {                            // initiale Konfiguration, kann alles
   char outputLabels[5][MAX_LABEL_LENGTH] = {"Antenna 1", "Antenna 2", "Antenna 3", "Antenna 4", "Antenna 5"}; // Output-Labels
   bool defaultInputEnabled[3] = {true, false, false}; // Standardzustand-Checkboxen
   bool defaultOutputEnabled[5] = {true, false, false, false, false}; // Standardzustand-Checkboxen
+  float maxTxPowerW = 100.0; // NEU: Maximale Sendeleistung in Watt (Standard 100.0W)
 };
 Config appConfig;
 Preferences appPrefs;
@@ -123,8 +124,6 @@ int16_t rawReflected = 0; // Gemessen an AIN1
 const float ADS_FULLSCALE = 4.096;
 const float ADS_MAX_VALUE = 32767.0; // Max. Rohwert (15-Bit, da +/-)
 const float MAX_CAL_VOLTAGE = 3.3;  // 3.3V am ADS1115 entspricht maximaler Leistung
-const float MAX_CAL_POWER = 150.0;      // Maximale Leistung in Watt (durch Poti eingestellt)
-const float VOLTS_SQ_TO_WATTS_FACTOR = MAX_CAL_POWER / (MAX_CAL_VOLTAGE * MAX_CAL_VOLTAGE); // Berechnung: 150.0 / (3.3 * 3.3) ≈ 13.77 W/V²
 
 void setupADS() {
   ads.begin(0x48);
@@ -134,17 +133,18 @@ void setupADS() {
 
 float voltageF = 0.0;
 float voltageR = 0.0;
-float powerF = 0.0;       // current Power
+float powerF = 0.0;       // current Power                                       
 float powerPeak = 0.0;    // MaxPower for current/last TX
 float swr = 1.0;          // SWR
 void readSWR(){
-  rawForward = ads.readADC_SingleEnded(0);
-  rawReflected = ads.readADC_SingleEnded(1);
+  rawForward = ads.readADC_SingleEnded(1);
+  rawReflected = ads.readADC_SingleEnded(0);
   voltageF = ((float)rawForward / ADS_MAX_VALUE) * ADS_FULLSCALE;
   if (voltageF < 0.0) voltageF = 0.0;
   voltageR = ((float)rawReflected / ADS_MAX_VALUE) * ADS_FULLSCALE;
   if (voltageR < 0.0) voltageR = 0.0;
-  powerF = (voltageF * voltageF) * VOLTS_SQ_TO_WATTS_FACTOR;
+  const float dynamicVoltsSqToWattsFactor = appConfig.maxTxPowerW / (MAX_CAL_VOLTAGE * MAX_CAL_VOLTAGE);
+  powerF = (voltageF * voltageF) * dynamicVoltsSqToWattsFactor;
   if (powerF >= powerPeak) powerPeak = powerF;
   if (voltageF <= 0.005) { 
     swr = 1.0;
@@ -454,6 +454,7 @@ void saveConfig() {
   appPrefs.putInt("version", appConfig.version);                 // Speichern der Einzelwerte (Version, Hostname, Passwort)
   appPrefs.putString("hostname", (const char*)appConfig.hostname); 
   appPrefs.putString("password", (const char*)appConfig.configPassword);
+  appPrefs.putFloat("maxTxPower", appConfig.maxTxPowerW);
   for (int i = 0; i < NUM_INPUTS; i++) {                         //Speichern der Labels und Defaults (Arrays)
     String iLabelKey = "iLabel" + String(i + 1);
     String iDefKey = "iDef" + String(i + 1);
@@ -483,6 +484,7 @@ void loadConfig() {
   appPrefs.begin("antswitch", true); // Neuen, stabilen Lesezugriff starten
   appPrefs.getString("hostname", appConfig.hostname, sizeof(appConfig.hostname));       // Hostname und Passwort laden
   appPrefs.getString("password", appConfig.configPassword, sizeof(appConfig.configPassword));
+  appConfig.maxTxPowerW = appPrefs.getFloat("maxTxPower", appConfig.maxTxPowerW);
   for (int i = 0; i < NUM_INPUTS; i++) {                     // Input Labels und Defaults
     String iLabelKey = "iLabel" + String(i + 1);
     String iDefKey = "iDef" + String(i + 1);
@@ -543,7 +545,11 @@ void handleConfig() {
     html += "<input type='text' name='oLabel" + String(i + 1) + "' value='" + String(appConfig.outputLabels[i]) + "'>";
     html += "<label><input type='radio' name='defaultOutput' value='" + String(i + 1) + "'" + (appConfig.defaultOutputEnabled[i] ? " checked" : "") + ">default output</label><p>";
   }
-  html += "<h2>Password and Hostname</h2>";
+  html += "<h2>System Settings</h2>";
+  // --- max Power for SWR-Meter ---
+  html += "<b>PWR/SWR-METER</b> <i>ADC-Values (max3.3V!):  F " + String(voltageF, 3) + " V ; R " + String(voltageR, 3) + " V (Refresh Page for current values)</i> - - - ";
+  html += "<label for='maxTxPower'><b>Calibration Max. Power (Watt):</b></label>";
+  html += "<input type='number' id='maxTxPower' name='maxTxPower' value='" + String(appConfig.maxTxPowerW, 1) + "' step='1.0' min='1.0' max='500.0'><br><br>"; // Bsp: 1W bis 500W
   // --- Passwort ---
   html += "<label for='password'><b>New Passwort (Admin)</b>:</label>";
   html += "<input type='password' id='password' name='password' value=''><br><br>";
@@ -580,7 +586,7 @@ void handleSaveConfig() {
 
     // 1. Alle Formularwerte in die RAM-Struktur (appConfig) kopieren
     
-    // a) HOSTNAME
+    // HOSTNAME
     if (server.hasArg("hostname")) {
         String newHostname = server.arg("hostname");
         if (newHostname.length() >= 1 && newHostname.length() <= 31) {
@@ -591,12 +597,23 @@ void handleSaveConfig() {
         }
     }
 
-    // b) PASSWORT
+    // PASSWORT
     if (server.hasArg("password") && server.arg("password").length() >= 8) {
         server.arg("password").toCharArray(appConfig.configPassword, MAX_PASSWORD_LENGTH);
     }
     
-    // c) LABELS und DEFAULTS
+    // MAX-POWER
+    if (server.hasArg("maxTxPower")) {
+        float newMaxPower = server.arg("maxTxPower").toFloat();
+        if (newMaxPower >= 1.0 && newMaxPower <= 500.0) { // Beispiel: Gültigkeitsbereich für Leistung (1W - 500W)
+            appConfig.maxTxPowerW = newMaxPower;
+        } else {
+            server.send(400, "text/plain", "Fehler: Maximale Leistung muss zwischen 1.0W und 500.0W liegen.");
+            return;
+        }
+    }
+
+    // LABELS und DEFAULTS
     int selectedInput = server.hasArg("defaultInput") ? server.arg("defaultInput").toInt() : -1;
     int selectedOutput = server.hasArg("defaultOutput") ? server.arg("defaultOutput").toInt() : -1;
     
@@ -807,13 +824,13 @@ void handleRoot() {
     
     // Visuelle Rückmeldung bei Blockade (Korrektur für Benutzerfreundlichkeit)
     html += "    if (data.status === 'blocked') {";
-    html += "      alert('Umschaltung blockiert: ' + data.message);";
+    html += "      alert('No switching: ' + data.message);";
     html += "    }";
     html += "  }).catch(error => console.error('Error switching:', error));";
     html += "}";
 
     // Initialisierung: Ruft den Status beim Laden ab und startet den Polling-Intervall
-    html += "window.onload = function() { fetchStatus(); setInterval(fetchStatus, 5000); };"; 
+    html += "window.onload = function() { fetchStatus(); setInterval(fetchStatus, 500); };"; 
     
     html += "</script>";
     html += "</body></html>";
