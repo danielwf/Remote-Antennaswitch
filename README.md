@@ -21,6 +21,8 @@ Since both the relay switching and the reading of the SWR bridge are communicate
 **Kicad 9:**
 You maybe need the KiCad symbol and footprint for the ESP32 Mini(Wemos D1 Mini) [https://github.com/r0oland/ESP32_mini_KiCad_Library](https://github.com/r0oland/ESP32_mini_KiCad_Library) - Thanks to [Johannes Rebling](https://github.com/r0oland)
 
+[Schematic](schematic.pdf)
+
 **Hardware:**
 Everything you need to prepare your PCB ordering with KiCAD is included. It is best to use a corresponding KiCAD plugin for this.  
 In "BOM.ods" you will find the material list with links to the item numbers at Mouser and Reichelt. In the table, you can easily adjust how many devices the parts should be ordered for (as of Oct-25).  
@@ -77,6 +79,5 @@ to discuss what you would like to change.
 
 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) 
 
-![Schematic](schematic.png)
 ![(Layout front)](layout_front.png)
 ![(Layout back)](layout_back.png)
