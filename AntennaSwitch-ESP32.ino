@@ -412,9 +412,17 @@ void switchButton() {
 //    .---------------------------------------------------------------------------------------.
 //    |             WIFI-Settings (2/2), Config-AP                                            |
 //    '---------------------------------------------------------------------------------------'
+bool restartOnConfigTimeout = false;
 void configModeCallback (WiFiManager *myWiFiManager) {
   Serial.print("Betrete den Konfigurationsmodus (Captive Portal). Verbinde mit dem AP: ");
   Serial.println(myWiFiManager->getConfigPortalSSID());
+  // Wenn das Portal geschlossen wird UND wir den Timeout gesetzt hatten,
+  // erzwingen wir den Neustart, um einen neuen Verbindungsversuch zu starten.
+  if (restartOnConfigTimeout) {
+      Serial.println("INFO: Captive Portal Timeout erreicht. Erzwinge Neustart.");
+      delay(100); // Kurze Pause
+      ESP.restart();
+  }
 }
 void saveConfigCallback() {
   // WICHTIG: Diese Funktion bleibt leer, da sie nur der Callback des WiFiManagers ist.
@@ -426,8 +434,10 @@ void WLANbegin(){
   wm.setAPCallback(configModeCallback);
   wm.setSaveConfigCallback(saveConfigCallback);
   wm.setConfigPortalTimeout(180); // Setzt den Timeout auf 180 Sekunden (3 Minuten)
+  restartOnConfigTimeout = true; // Wir wollen einen Neustart, wenn das Portal schließt
   if (!wm.autoConnect(apName, apPassword)) {
   } else {
+    restartOnConfigTimeout = false; // Zurücksetzen, kein Neustart nötig
     WiFi.setHostname(appConfig.hostname);
     MDNS.begin(appConfig.hostname);
     Serial.print("Erfolgreich mit WLAN verbunden! http://");
