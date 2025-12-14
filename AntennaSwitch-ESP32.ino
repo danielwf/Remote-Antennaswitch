@@ -1,4 +1,4 @@
-#define ANTSWITCH_REMOTE_VERSION 25121401
+#define ANTSWITCH_REMOTE_VERSION 25121402
 //
 //    .----------------------------------------------------------------------------------------------------------------------------------------------------------------.
 //    |                                                                 "AntSwitch Remote" with ESP32                                                                  |
@@ -412,14 +412,9 @@ void switchButton() {
 //    .---------------------------------------------------------------------------------------.
 //    |             WIFI-Settings (2/2), Config-AP                                            |
 //    '---------------------------------------------------------------------------------------'
-unsigned long configModeEntryTime = 0;
-const long RESTART_DELAY_MS = 180000; // 3 Minuten (3 * 60 * 1000 ms)
-bool inConfigMode = false;
 void configModeCallback (WiFiManager *myWiFiManager) {
   Serial.print("Betrete den Konfigurationsmodus (Captive Portal). Verbinde mit dem AP: ");
   Serial.println(myWiFiManager->getConfigPortalSSID());
-  configModeEntryTime = millis();  // setzt Zeitstempel für den Timer, der den Antennenschalter alle 3min zurücksetzt, falls kein WLAN gefunden wurde (falls Router langsamer als ESP startet...)
-  inConfigMode = true;
 }
 void saveConfigCallback() {
   // WICHTIG: Diese Funktion bleibt leer, da sie nur der Callback des WiFiManagers ist.
@@ -430,9 +425,8 @@ void WLANbegin(){
   wm.setDebugOutput(false);
   wm.setAPCallback(configModeCallback);
   wm.setSaveConfigCallback(saveConfigCallback);
+  wm.setConfigPortalTimeout(180); // Setzt den Timeout auf 180 Sekunden (3 Minuten)
   if (!wm.autoConnect(apName, apPassword)) {
-    configModeEntryTime = millis();
-    inConfigMode = true;
   } else {
     WiFi.setHostname(appConfig.hostname);
     MDNS.begin(appConfig.hostname);
@@ -1149,13 +1143,6 @@ void setup() {
 //    '----------------------------------------------------------------------------------------------------------------------------------------------------------------'
 
 void loop() {
-// Neustart im Konfigurationsmodus nach Timer-Ablauf (alle 3min, falls Router länger als Antennenschalter braucht...)
-  if (inConfigMode && (millis() - configModeEntryTime >= RESTART_DELAY_MS)) {
-    Serial.println("INFO: Neustart erzwungen, da laenger als 3 Minuten im Captive Portal.");
-    delay(100);
-    ESP.restart();
-  }
-
   handleSWRReading(); // liest das SWR-Meter (Intervalle werde in der Funktion gesteuert)
   handleSerialCommands(); // Serielle Steuerung
   switchButton();  //Nahbedienung per Buttons
