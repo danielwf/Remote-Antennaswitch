@@ -30,9 +30,18 @@ The BOM includes a housing that is well suited for this purpose. The drill holes
 Once the parts have been assembled, the Arduino code for the ESP32 can be uploaded. You will find this in “AntennaSwitch-ESP32.ino”. For later OTA updates via the web interface, you can use “AntennaSwitch-ESP32.ino.bin”.  
 
 ## Usage WIFI
-<img src="https://github.com/danielwf/Remote-Antennaswitch/blob/main/webinterface.png" height=300 align=right></img> After you have uploaded the Arduino code to the ESP32, you must connect to the “AntSwitch-Config” Wi-Fi network and set up the desired Wi-Fi network via the captive portal.  
+<img src="https://github.com/danielwf/Remote-Antennaswitch/blob/main/webinterface.png" height=300 align=right></img> After you have uploaded the Arduino code to the ESP32, you must connect to the “AntSwitch-Config” Wi-Fi network and set up the desired Wi-Fi network via the captive portal. 
 Once the device is connected to your home network, you can configure it via 'https://antswitch.local' such as a new host name and the labels for the connectors. **Default password for 'admin' is 'antswitch'**.  
-You can switch via webinterface or API. Examples: 'http://antswitch.local/api/switch?input=1' (set input to 1), 'http://antswitch.local/api/switch?output=2' (set output to 2) and 'http://antswitch.local/api/status' for JSON-Status. 
+You can also switch via API (example: you want to use CURL in your shell/script, maybe in combination with rigctld). Examples: 
+- http://antswitch.local/api/status (for JSON-Status)
+- http://antswitch.local/api/switch?input=1 (set input to 1)
+- http://antswitch.local/api/switch?output=2 (set output to 2)
+Setup via API:
+- http://antswitch.local/api/switch?iLabel1=IC-7300 (set Label of input 1)
+- http://antswitch.local/api/switch?oLabel2=Windom-Antenna (set Label of output 2)
+- http://antswitch.local/api/switch?defaultInput=1 (set default input after switch-on)
+- http://antswitch.local/api/switch?defaultOutput=2 (set default output after switch-on)
+- http://antswitch.local/api/status?maxTxPower=380 (Calibration of SWR-Meter acc to windings on transformer- or just try out and compare to other SWR-Meter)
 
 ## Usage USB-serial
 The device can also be controlled via the USB-serial interface (115200 baud). With “GET:NET” you can display the current IP address.  
