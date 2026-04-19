@@ -1,4 +1,4 @@
-#define ANTSWITCH_REMOTE_VERSION 25121402
+#define ANTSWITCH_REMOTE_VERSION 26041901
 //
 //    .----------------------------------------------------------------------------------------------------------------------------------------------------------------.
 //    |                                                                 "AntSwitch Remote" with ESP32                                                                  |
@@ -179,7 +179,7 @@ void handleSWRReading() {
     if (currentTime - lastSWRRead >= currentInterval) {     // prüft, ob Intervall abgelaufen ist
         readSWR();                                          // Messung durchführen
         lastSWRRead = currentTime;
-        if (powerF > 0.0) lastTxTime = currentTime;         // prüft, ob gesendet wird und aktualisiert den TX-Zeitstempel
+        if (powerF > 0.1) lastTxTime = currentTime;         // prüft, ob gesendet wird und aktualisiert den TX-Zeitstempel
     }
 }
 
