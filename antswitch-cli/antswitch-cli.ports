@@ -1,0 +1,18 @@
+# Global config of antennas and labels
+# This file can be used by other programms too!
+# File will be overwritten by download from antenna switch (if selected in config-file)
+[Labels]
+Inputs=3
+Outputs=5
+In_1="ICOM IC-7300"
+In_2="Wurfleitung"
+In_3="WebRX"
+Out_1="Windom"
+Out_2="Reserviert 2"
+Out_3="Reserviert 3"
+Out_4="Reserviert 4"
+Out_5="Reserviert 5"
+
+[Defaults]
+DEFAULT_INPUT=1
+DEFAULT_OUTPUT=1
