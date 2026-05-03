@@ -8,10 +8,12 @@ Configuration of addresses and commands (admin users are only relevant for the w
   
 antswitch-cli.frq-map:  
 Overview of frequencies, antennas, and tuners to be used.  
-Syntax: [Start Frequency (Hz)]-[End Frequency (Hz)]=[Antenna Number]|[TUNER (EXTERNAL/INTERNAL/OFF)]  
+--> This file is helpful to other applications, e.g., for using remote transceiver software.  
+Syntax: [Start Frequency (Hz)]-[End Frequency (Hz)]=[Antenna Number]|[TUNER (EXTERN/INTERN/AUS)]
   
 antswitch-cli.port:  
 Labels and Default Ports  
+--> This file is helpful to other applications, e.g., for using remote transceiver software.  
 (The script can read this information from the hardware and write it to the file)  
   
 install.sh:  
